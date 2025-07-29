@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>Admin Dashboard - EventSphere</title>
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+  <!-- Navigation Bar -->
   <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">EventSphere - Admin Panel</a>
@@ -17,6 +20,7 @@
   </nav>
 
   <div class="container mt-4">
+    <!-- Pending Events Section -->
     <h3>Pending Event Proposals</h3>
     <table class="table table-bordered mt-3">
       <thead class="table-dark">
@@ -34,6 +38,7 @@
       </tbody>
     </table>
 
+    <!-- Approved Events Section -->
     <h3 class="mt-5">Approved Events</h3>
     <table class="table table-bordered mt-3">
       <thead class="table-success">
@@ -48,6 +53,7 @@
       <tbody id="approved-events"></tbody>
     </table>
 
+    <!-- Rejected Events Section -->
     <h3 class="mt-5">Rejected Events</h3>
     <table class="table table-bordered mt-3">
       <thead class="table-danger">
@@ -64,13 +70,14 @@
   </div>
 
   <script>
+    // Redirect if user is not an admin
     const userRole = localStorage.getItem("role");
     if (userRole !== 'admin') {
         alert("⚠️ Access Denied: Only admins can view this page.");
         window.location.href = "login.html";
     }
 
-    // Helper to get auth headers
+    // Helper function to return authorization headers for authenticated requests
     function getAuthHeaders() {
       const token = localStorage.getItem('token');
       return {
@@ -79,25 +86,30 @@
       };
     }
 
+    // Logout function to clear local storage and redirect to login
     function logout() {
         localStorage.clear();
         window.location.href = "login.html";
     }
 
+    // Function to fetch all events and categorize them
     async function loadEvents() {
       try {
         const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
 
+        // Get table bodies
         const pendingTable = document.getElementById("pending-events");
         const approvedTable = document.getElementById("approved-events");
         const rejectedTable = document.getElementById("rejected-events");
 
+        // Clear previous data
         pendingTable.innerHTML = "";
         approvedTable.innerHTML = "";
         rejectedTable.innerHTML = "";
 
+        // Handle empty case
         if (events.length === 0) {
             pendingTable.innerHTML = '<tr><td colspan="6" class="text-center">No events found.</td></tr>';
             approvedTable.innerHTML = '<tr><td colspan="5" class="text-center">No approved events.</td></tr>';
@@ -105,11 +117,13 @@
             return;
         }
 
+        // Loop through events and categorize into tables
         events.forEach(event => {
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>${event.title}</td>
-            <td>${event.createdBy ? event.createdBy.name : 'N/A'}</td> <td>${event.date}</td>
+            <td>${event.createdBy ? event.createdBy.name : 'N/A'}</td> 
+            <td>${event.date}</td>
             <td>${event.venue}</td>
             ${
               event.status === "pending"
@@ -119,10 +133,11 @@
                      <button class="btn btn-danger btn-sm" onclick="updateEventStatus('${event._id}', 'rejected')">Reject</button>
                    </td>`
                 : `<td><span class="badge bg-${event.status === "approved" ? "success" : "danger"}">${event.status.charAt(0).toUpperCase() + event.status.slice(1)}</span></td>
-                   <td></td> `
+                   <td></td>`
             }
           `;
 
+          // Append to respective table
           if (event.status === "pending") {
             pendingTable.appendChild(row);
           } else if (event.status === "approved") {
@@ -132,7 +147,7 @@
           }
         });
 
-        // If a table is empty, show a message
+        // Display messages if tables are empty
         if (pendingTable.childElementCount === 0) pendingTable.innerHTML = '<tr><td colspan="6" class="text-center">No pending events.</td></tr>';
         if (approvedTable.childElementCount === 0) approvedTable.innerHTML = '<tr><td colspan="5" class="text-center">No approved events.</td></tr>';
         if (rejectedTable.childElementCount === 0) rejectedTable.innerHTML = '<tr><td colspan="5" class="text-center">No rejected events.</td></tr>';
@@ -140,26 +155,27 @@
       } catch (err) {
         console.error("Error loading events:", err);
         alert("❌ Failed to load events: " + err.message);
-         // Optionally redirect to login if token is invalid
+
+        // Auto logout on authentication failure
         if (err.message.includes('401') || err.message.includes('403')) {
             logout();
         }
       }
     }
 
+    // Function to approve or reject an event
     async function updateEventStatus(eventId, status) {
       try {
-        // Send PATCH request to the new /:id/status endpoint
         const res = await fetch(`http://localhost:3000/api/events/${eventId}/status`, {
-          method: "PATCH", // Changed to PATCH
-          headers: getAuthHeaders(), // Include auth headers
-          body: JSON.stringify({ status: status }) // Send the desired status
+          method: "PATCH",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ status: status })
         });
 
         const result = await res.json();
         if (res.ok) {
           alert(`✅ Event ${status} successfully!`);
-          loadEvents(); // Reload events to update status
+          loadEvents(); // Reload list
         } else {
           alert("❌ " + (result.error || result.message || "Failed to update event status."));
         }
@@ -169,6 +185,7 @@
       }
     }
 
+    // Load events when page is fully loaded
     document.addEventListener("DOMContentLoaded", loadEvents);
   </script>
 </body>
