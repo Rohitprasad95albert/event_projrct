@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Dashboard - EventSphere</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">EventSphere - Student</a>
+      <span class="text-white">Welcome, <span id="student-name">Student</span></span>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <!-- Upcoming Events Section -->
+    <h3>Upcoming Events</h3>
+    <div class="row" id="upcoming-events"></div>
+
+    <!-- Registered Events Section -->
+    <h3 class="mt-5">Your Registered Events</h3>
+    <div class="row" id="registered-events"></div>
+  </div>
+
+  <script>
+    const userId = localStorage.getItem("userId");
+    const studentName = localStorage.getItem("name") || "Student";
+    document.getElementById("student-name").innerText = studentName;
+
+    if (!userId) {
+      alert("⚠️ Please login first.");
+      window.location.href = "login.html";
+    }
+
+    async function loadEvents() {
+      try {
+        const res = await fetch("http://localhost:3000/api/events");
+        const events = await res.json();
+
+        const upcomingContainer = document.getElementById("upcoming-events");
+        const registeredContainer = document.getElementById("registered-events");
+
+        upcomingContainer.innerHTML = "";
+        registeredContainer.innerHTML = "";
+
+        events.forEach(event => {
+          if (event.status !== "approved") return;
+
+          const isRegistered = event.participants.includes(userId);
+          const card = document.createElement("div");
+          card.className = "col-md-4";
+          card.innerHTML = `
+            <div class="card mb-3 shadow-sm ${isRegistered ? 'border-success' : ''}">
+              <div class="card-body">
+                <h5 class="card-title">${event.title}</h5>
+                <p class="card-text">Date: ${event.date} | Venue: ${event.venue}</p>
+                ${
+                  isRegistered
+                    ? `<a href="certificate.html?event=${encodeURIComponent(event.title)}" class="btn btn-success w-100">Download Certificate</a>`
+                    : `<button class="btn btn-primary w-100" onclick="registerEvent('${event._id}')">Register</button>`
+                }
+              </div>
+            </div>
+          `;
+
+          if (isRegistered) {
+            registeredContainer.appendChild(card);
+          } else {
+            upcomingContainer.appendChild(card);
+          }
+        });
+      } catch (error) {
+        alert("⚠️ Failed to load events. Please try again.");
+      }
+    }
+
+    async function registerEvent(eventId) {
+      try {
+        const res = await fetch("http://localhost:3000/api/events/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, eventId })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("✅ Registered successfully!");
+          loadEvents();
+        } else {
+          alert("❌ " + data.message);
+        }
+      } catch (err) {
+        alert("⚠️ Server error. Try again.");
+      }
+    }
+
+    // Load events on page load
+    document.addEventListener("DOMContentLoaded", loadEvents);
+  </script>
+</body>
+</html>

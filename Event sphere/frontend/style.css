@@ -1,0 +1,92 @@
+/* style.css */
+
+/* Universal reset and base font */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+  color: #333;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5 {
+  color: #222;
+}
+
+/* Navbar */
+.navbar {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Buttons */
+.btn {
+  border-radius: 6px;
+}
+
+.btn-success, .btn-primary, .btn-danger {
+  font-weight: 500;
+}
+
+/* Forms */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+textarea,
+select {
+  border-radius: 5px;
+}
+
+/* Tables */
+table {
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+table th, table td {
+  vertical-align: middle;
+}
+
+/* Cards */
+.card {
+  border-radius: 10px;
+  border: none;
+}
+
+/* Event Cards on Dashboard */
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.card-text {
+  color: #666;
+}
+
+/* Certificate page specific (if needed) */
+#certificate-box h2 {
+  color: #2c3e50;
+}
+
+.badge {
+  font-size: 0.9em;
+  padding: 5px 10px;
+  border-radius: 10px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  h1, h2 {
+    font-size: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+
+  .navbar-brand {
+    font-size: 1rem;
+  }
+}

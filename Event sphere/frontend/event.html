@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Event Details - EventSphere</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">EventSphere</a>
+      <a href="student-dashboard.html" class="btn btn-outline-light">Back to Dashboard</a>
+    </div>
+  </nav>
+
+  <div class="container mt-5">
+    <div class="row">
+      <!-- Left Column: Event Details -->
+      <div class="col-md-8">
+        <h2 id="event-title">Loading...</h2>
+        <p class="text-muted">Date: <span id="event-date"></span> | Venue: <span id="event-venue"></span></p>
+        <p id="event-description"></p>
+        <h5>Organizer:</h5>
+        <p id="event-club"></p>
+      </div>
+
+      <!-- Right Column: Registration -->
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Register Now</h5>
+            <form id="registration-form">
+              <p><strong>Name:</strong> <span id="student-name"></span></p>
+              <p><strong>Email:</strong> <span id="student-email"></span></p>
+              <button type="submit" class="btn btn-primary w-100">Register</button>
+              <p id="message" class="mt-2 text-success" style="display: none;"></p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const userId = localStorage.getItem("userId");
+  const studentName = localStorage.getItem("name");
+  const studentEmail = localStorage.getItem("email");
+
+  if (!userId || !studentName || !studentEmail) {
+    alert("⚠️ Please login to register.");
+    window.location.href = "login.html";
+  }
+
+  document.getElementById("student-name").innerText = studentName;
+  document.getElementById("student-email").innerText = studentEmail;
+
+  // ✅ 1. Get event ID from URL
+  function getEventIdFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("id");
+  }
+
+  // ✅ 2. Load Event Details
+  async function loadEventDetails() {
+    const eventId = getEventIdFromURL();
+    if (!eventId) return alert("No event ID found in URL.");
+
+    try {
+      const res = await fetch("http://localhost:3000/api/events");
+      const events = await res.json();
+      const event = events.find(e => e._id === eventId);
+
+      if (!event) return alert("Event not found!");
+
+      document.getElementById("event-title").innerText = event.title;
+      document.getElementById("event-date").innerText = event.date;
+      document.getElementById("event-venue").innerText = event.venue;
+      document.getElementById("event-description").innerText = event.description;
+      document.getElementById("event-club").innerText = event.club;
+
+    } catch (err) {
+      alert("❌ Failed to load event details.");
+    }
+  }
+
+  // ✅ 3. Handle Registration
+  document.getElementById("registration-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const eventId = getEventIdFromURL();
+    if (!userId || !eventId) {
+      return alert("Missing user or event ID.");
+    }
+
+    try {
+      const res = await fetch("http://localhost:3000/api/events/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, eventId })
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        document.getElementById("message").innerText = "✅ Registered successfully!";
+        document.getElementById("message").style.display = "block";
+      } else {
+        alert("❌ " + result.message);
+      }
+    } catch (err) {
+      alert("⚠️ Server error during registration.");
+    }
+  });
+
+  // ✅ 4. Load on page load
+  document.addEventListener("DOMContentLoaded", loadEventDetails);
+</script>
+</body>
+</html>
