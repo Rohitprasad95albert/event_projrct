@@ -4,10 +4,13 @@
   <meta charset="UTF-8">
   <title>Event Details - EventSphere</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS for responsive design -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- Navbar with branding and back button -->
   <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">EventSphere</a>
@@ -15,17 +18,25 @@
     </div>
   </nav>
 
+  <!-- Main container for event details -->
   <div class="container mt-5">
     <div class="row">
+      <!-- Left section: event info -->
       <div class="col-md-8">
         <h2 id="event-title">Loading...</h2>
-        <p class="text-muted">Date: <span id="event-date"></span> | Time: <span id="event-time"></span> | Venue: <span id="event-venue"></span></p>
+        <p class="text-muted">
+          Date: <span id="event-date"></span> |
+          Time: <span id="event-time"></span> |
+          Venue: <span id="event-venue"></span>
+        </p>
         <p id="event-description"></p>
         <h5>Organizer:</h5>
-        <p id="event-organizer-name"></p> <h5>Event Type:</h5>
+        <p id="event-organizer-name"></p>
+        <h5>Event Type:</h5>
         <p id="event-type"></p>
-        </div>
+      </div>
 
+      <!-- Right section: registration card -->
       <div class="col-md-4">
         <div class="card shadow-sm">
           <div class="card-body">
@@ -44,17 +55,19 @@
   </div>
 
 <script>
+  // Get user data from localStorage
   const userId = localStorage.getItem("userId");
   const studentName = localStorage.getItem("name");
   const studentEmail = localStorage.getItem("email");
   const userRole = localStorage.getItem("role");
 
+  // Redirect if user is not logged in
   if (!userId || !studentName || !studentEmail) {
     alert("⚠️ Please login to register.");
     window.location.href = "login.html";
   }
 
-  // Helper to get auth headers
+  // Return authorization headers for authenticated requests
   function getAuthHeaders() {
     const token = localStorage.getItem('token');
     return {
@@ -63,49 +76,46 @@
     };
   }
 
+  // Fill student name and email into the form
   document.getElementById("student-name").innerText = studentName;
   document.getElementById("student-email").innerText = studentEmail;
 
-  // ✅ 1. Get event ID from URL
+  // Get event ID from URL query string
   function getEventIdFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get("id");
   }
 
-  // ✅ 2. Load Event Details
+  // Load and display event details
   async function loadEventDetails() {
     const eventId = getEventIdFromURL();
     if (!eventId) return alert("No event ID found in URL.");
 
     try {
-      // Fetch all events and find the specific one
+      // Fetch all events from backend
       const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const events = await res.json();
       const event = events.find(e => e._id === eventId);
 
       if (!event) return alert("Event not found!");
-      if (event.status !== 'approved' && userRole !== 'admin') { // Only show approved events to non-admins
+
+      // Only admins can see unapproved events
+      if (event.status !== 'approved' && userRole !== 'admin') {
           alert("This event is not yet approved or has been rejected.");
-          document.getElementById("register-btn").style.display = 'none'; // Hide register button
+          document.getElementById("register-btn").style.display = 'none';
       }
 
+      // Populate event details in the HTML
       document.getElementById("event-title").innerText = event.title;
       document.getElementById("event-date").innerText = event.date;
-      document.getElementById("event-time").innerText = event.time; // Display time
+      document.getElementById("event-time").innerText = event.time;
       document.getElementById("event-venue").innerText = event.venue;
       document.getElementById("event-description").innerText = event.description;
-      document.getElementById("event-organizer-name").innerText = event.createdBy ? event.createdBy.name : 'N/A'; // Display organizer name
-      document.getElementById("event-type").innerText = event.type; // Display type
+      document.getElementById("event-organizer-name").innerText = event.createdBy ? event.createdBy.name : 'N/A';
+      document.getElementById("event-type").innerText = event.type;
 
-      // If you have posters
-      // if (event.posterUrl) {
-      //     const posterImg = document.getElementById("event-poster");
-      //     posterImg.src = `http://localhost:3000${event.posterUrl}`; // Assuming backend serves uploads
-      //     posterImg.style.display = 'block';
-      // }
-
-      // Check if already registered and disable button
+      // Show message if already registered
       if (event.attendees && event.attendees.includes(userId)) {
         document.getElementById("register-btn").innerText = "Already Registered";
         document.getElementById("register-btn").disabled = true;
@@ -115,14 +125,13 @@
         document.getElementById("message").style.display = 'block';
       }
 
-
     } catch (err) {
       console.error("Failed to load event details:", err);
       alert("❌ Failed to load event details.");
     }
   }
 
-  // ✅ 3. Handle Registration
+  // Handle event registration on form submit
   document.getElementById("registration-form").addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -139,15 +148,17 @@
     }
 
     try {
+      // Call API to register the student for the event
       const res = await fetch(`http://localhost:3000/api/events/${eventId}/register`, {
         method: "POST",
-        headers: getAuthHeaders(), // Include auth headers
-        body: JSON.stringify({}) // userId is taken from token on backend
+        headers: getAuthHeaders(),
+        body: JSON.stringify({}) // userId will be extracted from token on backend
       });
 
       const result = await res.json();
 
       if (res.ok) {
+        // Update UI on success
         msgDisplay.innerText = "✅ Registered successfully!";
         msgDisplay.style.display = "block";
         document.getElementById("register-btn").innerText = "Already Registered";
@@ -165,8 +176,9 @@
     }
   });
 
-  // ✅ 4. Load on page load
+  // Load event data on page load
   document.addEventListener("DOMContentLoaded", loadEventDetails);
 </script>
+
 </body>
 </html>
