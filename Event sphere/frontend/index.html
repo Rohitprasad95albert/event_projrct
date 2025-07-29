@@ -68,10 +68,8 @@
         <a class="btn btn-outline-light me-2" href="login.html">Login</a>
         <a class="btn btn-light" href="signup.html">Sign Up</a>
         <a class="btn btn-light" href="student-dashboard.html">Student Dashboard</a>
-        <a class="btn btn-light" href="event.html">Event</a>
         <a class="btn btn-light" href="club-dashborad.html">Club Dashboard</a>
-        <a class="btn btn-light" href="certificate.html">Certificate</a>
-        <a class="btn btn-light" href="admin-dashborad.html">Admin</a>
+        <a class="btn btn-light" href="admin-dashborad.html">Admin Dashboard</a>
         <button class="btn btn-outline-light" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -109,11 +107,16 @@
   </footer>
 
   <script>
+    // Global logout function for all pages
     function logout() {
       localStorage.clear();
       window.location.href = "login.html";
     }
+    // The script.js inclusion below is not strictly needed for this file,
+    // as its main functions are event handlers for specific forms/buttons
+    // which are not present on index.html, but it doesn't hurt.
+    // It's better to move common JS to a separate file and include it conditionally
+    // or ensure its functions are globally available if needed across pages.
   </script>
-  <script src="script.js"></script>
-</body>
+  </body>
 </html>

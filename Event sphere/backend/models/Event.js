@@ -1,3 +1,4 @@
+// backend/models/Event.js (No changes needed)
 const mongoose = require('mongoose');
 
 const eventSchema = new mongoose.Schema({
@@ -7,7 +8,7 @@ const eventSchema = new mongoose.Schema({
   date: String,
   time: String,
   venue: String,
-  status: { type: String, default: 'pending' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' }, // Added 'rejected' to enum
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   posterUrl: String

@@ -8,16 +8,15 @@
 </head>
 <body>
 
-  <!-- Navbar -->
   <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">EventSphere - Admin Panel</a>
       <span class="text-white">Welcome, Admin</span>
+      <button class="btn btn-outline-light" onclick="logout()">Logout</button>
     </div>
   </nav>
 
   <div class="container mt-4">
-    <!-- 🔄 Pending Events -->
     <h3>Pending Event Proposals</h3>
     <table class="table table-bordered mt-3">
       <thead class="table-dark">
@@ -35,7 +34,6 @@
       </tbody>
     </table>
 
-    <!-- ✅ Approved Events -->
     <h3 class="mt-5">Approved Events</h3>
     <table class="table table-bordered mt-3">
       <thead class="table-success">
@@ -50,7 +48,6 @@
       <tbody id="approved-events"></tbody>
     </table>
 
-    <!-- ❌ Rejected Events -->
     <h3 class="mt-5">Rejected Events</h3>
     <table class="table table-bordered mt-3">
       <thead class="table-danger">
@@ -67,9 +64,30 @@
   </div>
 
   <script>
+    const userRole = localStorage.getItem("role");
+    if (userRole !== 'admin') {
+        alert("⚠️ Access Denied: Only admins can view this page.");
+        window.location.href = "login.html";
+    }
+
+    // Helper to get auth headers
+    function getAuthHeaders() {
+      const token = localStorage.getItem('token');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+
     async function loadEvents() {
       try {
-        const res = await fetch("http://localhost:3000/api/events");
+        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
 
         const pendingTable = document.getElementById("pending-events");
@@ -80,12 +98,18 @@
         approvedTable.innerHTML = "";
         rejectedTable.innerHTML = "";
 
+        if (events.length === 0) {
+            pendingTable.innerHTML = '<tr><td colspan="6" class="text-center">No events found.</td></tr>';
+            approvedTable.innerHTML = '<tr><td colspan="5" class="text-center">No approved events.</td></tr>';
+            rejectedTable.innerHTML = '<tr><td colspan="5" class="text-center">No rejected events.</td></tr>';
+            return;
+        }
+
         events.forEach(event => {
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>${event.title}</td>
-            <td>${event.club}</td>
-            <td>${event.date}</td>
+            <td>${event.createdBy ? event.createdBy.name : 'N/A'}</td> <td>${event.date}</td>
             <td>${event.venue}</td>
             ${
               event.status === "pending"
@@ -94,7 +118,8 @@
                      <button class="btn btn-success btn-sm me-2" onclick="updateEventStatus('${event._id}', 'approved')">Approve</button>
                      <button class="btn btn-danger btn-sm" onclick="updateEventStatus('${event._id}', 'rejected')">Reject</button>
                    </td>`
-                : `<td><span class="badge bg-${event.status === "approved" ? "success" : "danger"}">${event.status.charAt(0).toUpperCase() + event.status.slice(1)}</span></td>`
+                : `<td><span class="badge bg-${event.status === "approved" ? "success" : "danger"}">${event.status.charAt(0).toUpperCase() + event.status.slice(1)}</span></td>
+                   <td></td> `
             }
           `;
 
@@ -106,27 +131,40 @@
             rejectedTable.appendChild(row);
           }
         });
+
+        // If a table is empty, show a message
+        if (pendingTable.childElementCount === 0) pendingTable.innerHTML = '<tr><td colspan="6" class="text-center">No pending events.</td></tr>';
+        if (approvedTable.childElementCount === 0) approvedTable.innerHTML = '<tr><td colspan="5" class="text-center">No approved events.</td></tr>';
+        if (rejectedTable.childElementCount === 0) rejectedTable.innerHTML = '<tr><td colspan="5" class="text-center">No rejected events.</td></tr>';
+
       } catch (err) {
+        console.error("Error loading events:", err);
         alert("❌ Failed to load events: " + err.message);
+         // Optionally redirect to login if token is invalid
+        if (err.message.includes('401') || err.message.includes('403')) {
+            logout();
+        }
       }
     }
 
     async function updateEventStatus(eventId, status) {
       try {
-        const res = await fetch("http://localhost:3000/api/events/approve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId, status })
+        // Send PATCH request to the new /:id/status endpoint
+        const res = await fetch(`http://localhost:3000/api/events/${eventId}/status`, {
+          method: "PATCH", // Changed to PATCH
+          headers: getAuthHeaders(), // Include auth headers
+          body: JSON.stringify({ status: status }) // Send the desired status
         });
 
         const result = await res.json();
         if (res.ok) {
-          alert(`✅ Event ${status}`);
-          loadEvents();
+          alert(`✅ Event ${status} successfully!`);
+          loadEvents(); // Reload events to update status
         } else {
-          alert("❌ " + result.message);
+          alert("❌ " + (result.error || result.message || "Failed to update event status."));
         }
       } catch (err) {
+        console.error("Error updating event status:", err);
         alert("⚠️ Error: " + err.message);
       }
     }

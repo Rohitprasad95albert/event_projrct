@@ -44,47 +44,64 @@
     <h1>Certificate of Participation</h1>
     <p>This is to certify that</p>
     <h2 id="student-name"><strong>Loading...</strong></h2>
-    <p>has participated in</p>
+    <p>has successfully participated in</p>
     <h3 id="event-name"><strong>Loading...</strong></h3>
     <p>held on <strong><span id="event-date">Date</span></strong> at <strong>ABC University</strong>.</p>
   </div>
   <button id="download-btn" class="btn btn-primary">Download Certificate</button>
 
-  <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-  <!-- Dynamic Content -->
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       const name = localStorage.getItem("name") || "Participant";
-      const eventId = new URLSearchParams(window.location.search).get("id");
+      const eventId = new URLSearchParams(window.location.search).get("id"); // Get 'id' parameter
 
       if (!eventId) {
-        alert("⚠️ No event ID provided.");
+        alert("⚠️ No event ID provided for certificate.");
         return;
       }
 
       document.getElementById("student-name").innerText = name;
 
+      // Helper to get auth headers (needed if fetching event details directly)
+      function getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        return {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        };
+      }
+
       try {
-        const res = await fetch("http://localhost:3000/api/events");
+        // Fetch all events and find the specific one by ID
+        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() }); // Include auth
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
         const event = events.find(e => e._id === eventId);
 
-        if (!event) return alert("❌ Event not found.");
+        if (!event) return alert("❌ Event not found for certificate generation.");
 
         document.getElementById("event-name").innerText = event.title;
         document.getElementById("event-date").innerText = event.date;
 
       } catch (err) {
-        alert("❌ Failed to load event details.");
+        console.error("Failed to load event details for certificate:", err);
+        alert("❌ Failed to load event details for certificate.");
       }
     });
 
     // Download PDF
     document.getElementById("download-btn").addEventListener("click", () => {
       const element = document.getElementById("certificate-box");
-      html2pdf().from(element).save("certificate.pdf");
+      // Ensure correct scaling and quality for PDF generation
+      html2pdf().from(element).set({
+        margin: 10,
+        filename: 'certificate.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).save();
     });
   </script>
 

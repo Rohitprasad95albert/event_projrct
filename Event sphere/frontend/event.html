@@ -17,16 +17,15 @@
 
   <div class="container mt-5">
     <div class="row">
-      <!-- Left Column: Event Details -->
       <div class="col-md-8">
         <h2 id="event-title">Loading...</h2>
-        <p class="text-muted">Date: <span id="event-date"></span> | Venue: <span id="event-venue"></span></p>
+        <p class="text-muted">Date: <span id="event-date"></span> | Time: <span id="event-time"></span> | Venue: <span id="event-venue"></span></p>
         <p id="event-description"></p>
         <h5>Organizer:</h5>
-        <p id="event-club"></p>
-      </div>
+        <p id="event-organizer-name"></p> <h5>Event Type:</h5>
+        <p id="event-type"></p>
+        </div>
 
-      <!-- Right Column: Registration -->
       <div class="col-md-4">
         <div class="card shadow-sm">
           <div class="card-body">
@@ -34,8 +33,9 @@
             <form id="registration-form">
               <p><strong>Name:</strong> <span id="student-name"></span></p>
               <p><strong>Email:</strong> <span id="student-email"></span></p>
-              <button type="submit" class="btn btn-primary w-100">Register</button>
+              <button type="submit" class="btn btn-primary w-100" id="register-btn">Register</button>
               <p id="message" class="mt-2 text-success" style="display: none;"></p>
+              <p id="error-message" class="mt-2 text-danger" style="display: none;"></p>
             </form>
           </div>
         </div>
@@ -47,10 +47,20 @@
   const userId = localStorage.getItem("userId");
   const studentName = localStorage.getItem("name");
   const studentEmail = localStorage.getItem("email");
+  const userRole = localStorage.getItem("role");
 
   if (!userId || !studentName || !studentEmail) {
     alert("⚠️ Please login to register.");
     window.location.href = "login.html";
+  }
+
+  // Helper to get auth headers
+  function getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
   }
 
   document.getElementById("student-name").innerText = studentName;
@@ -68,19 +78,46 @@
     if (!eventId) return alert("No event ID found in URL.");
 
     try {
-      const res = await fetch("http://localhost:3000/api/events");
+      // Fetch all events and find the specific one
+      const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const events = await res.json();
       const event = events.find(e => e._id === eventId);
 
       if (!event) return alert("Event not found!");
+      if (event.status !== 'approved' && userRole !== 'admin') { // Only show approved events to non-admins
+          alert("This event is not yet approved or has been rejected.");
+          document.getElementById("register-btn").style.display = 'none'; // Hide register button
+      }
 
       document.getElementById("event-title").innerText = event.title;
       document.getElementById("event-date").innerText = event.date;
+      document.getElementById("event-time").innerText = event.time; // Display time
       document.getElementById("event-venue").innerText = event.venue;
       document.getElementById("event-description").innerText = event.description;
-      document.getElementById("event-club").innerText = event.club;
+      document.getElementById("event-organizer-name").innerText = event.createdBy ? event.createdBy.name : 'N/A'; // Display organizer name
+      document.getElementById("event-type").innerText = event.type; // Display type
+
+      // If you have posters
+      // if (event.posterUrl) {
+      //     const posterImg = document.getElementById("event-poster");
+      //     posterImg.src = `http://localhost:3000${event.posterUrl}`; // Assuming backend serves uploads
+      //     posterImg.style.display = 'block';
+      // }
+
+      // Check if already registered and disable button
+      if (event.attendees && event.attendees.includes(userId)) {
+        document.getElementById("register-btn").innerText = "Already Registered";
+        document.getElementById("register-btn").disabled = true;
+        document.getElementById("register-btn").classList.remove('btn-primary');
+        document.getElementById("register-btn").classList.add('btn-secondary');
+        document.getElementById("message").innerText = "You are already registered for this event.";
+        document.getElementById("message").style.display = 'block';
+      }
+
 
     } catch (err) {
+      console.error("Failed to load event details:", err);
       alert("❌ Failed to load event details.");
     }
   }
@@ -90,27 +127,41 @@
     e.preventDefault();
 
     const eventId = getEventIdFromURL();
+    const msgDisplay = document.getElementById("message");
+    const errorMsgDisplay = document.getElementById("error-message");
+    msgDisplay.style.display = 'none';
+    errorMsgDisplay.style.display = 'none';
+
     if (!userId || !eventId) {
-      return alert("Missing user or event ID.");
+      errorMsgDisplay.innerText = "Missing user or event ID.";
+      errorMsgDisplay.style.display = 'block';
+      return;
     }
 
     try {
-      const res = await fetch("http://localhost:3000/api/events/register", {
+      const res = await fetch(`http://localhost:3000/api/events/${eventId}/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, eventId })
+        headers: getAuthHeaders(), // Include auth headers
+        body: JSON.stringify({}) // userId is taken from token on backend
       });
 
       const result = await res.json();
 
       if (res.ok) {
-        document.getElementById("message").innerText = "✅ Registered successfully!";
-        document.getElementById("message").style.display = "block";
+        msgDisplay.innerText = "✅ Registered successfully!";
+        msgDisplay.style.display = "block";
+        document.getElementById("register-btn").innerText = "Already Registered";
+        document.getElementById("register-btn").disabled = true;
+        document.getElementById("register-btn").classList.remove('btn-primary');
+        document.getElementById("register-btn").classList.add('btn-secondary');
       } else {
-        alert("❌ " + result.message);
+        errorMsgDisplay.innerText = "❌ " + (result.error || result.message || "Registration failed.");
+        errorMsgDisplay.style.display = "block";
       }
     } catch (err) {
-      alert("⚠️ Server error during registration.");
+      console.error("Server error during registration:", err);
+      errorMsgDisplay.innerText = "⚠️ Server error during registration.";
+      errorMsgDisplay.style.display = "block";
     }
   });
 

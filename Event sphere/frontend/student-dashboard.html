@@ -12,15 +12,14 @@
     <div class="container-fluid">
       <a class="navbar-brand" href="#">EventSphere - Student</a>
       <span class="text-white">Welcome, <span id="student-name">Student</span></span>
+      <button class="btn btn-outline-light" onclick="logout()">Logout</button>
     </div>
   </nav>
 
   <div class="container mt-4">
-    <!-- Upcoming Events Section -->
     <h3>Upcoming Events</h3>
     <div class="row" id="upcoming-events"></div>
 
-    <!-- Registered Events Section -->
     <h3 class="mt-5">Your Registered Events</h3>
     <div class="row" id="registered-events"></div>
   </div>
@@ -35,9 +34,25 @@
       window.location.href = "login.html";
     }
 
+    // Helper to get auth headers
+    function getAuthHeaders() {
+      const token = localStorage.getItem('token');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+
     async function loadEvents() {
       try {
-        const res = await fetch("http://localhost:3000/api/events");
+        // Fetch all events
+        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
 
         const upcomingContainer = document.getElementById("upcoming-events");
@@ -47,9 +62,12 @@
         registeredContainer.innerHTML = "";
 
         events.forEach(event => {
+          // Only display approved events
           if (event.status !== "approved") return;
 
-          const isRegistered = event.participants.includes(userId);
+          // Check if the current user is in the attendees list
+          const isRegistered = event.attendees.includes(userId); // Corrected from 'participants'
+
           const card = document.createElement("div");
           card.className = "col-md-4";
           card.innerHTML = `
@@ -57,11 +75,13 @@
               <div class="card-body">
                 <h5 class="card-title">${event.title}</h5>
                 <p class="card-text">Date: ${event.date} | Venue: ${event.venue}</p>
+                <p class="card-text">Organizer: ${event.createdBy ? event.createdBy.name : 'N/A'}</p>
                 ${
                   isRegistered
-                    ? `<a href="certificate.html?event=${encodeURIComponent(event.title)}" class="btn btn-success w-100">Download Certificate</a>`
+                    ? `<a href="certificate.html?id=${event._id}" class="btn btn-success w-100">Download Certificate</a>` // Pass event._id
                     : `<button class="btn btn-primary w-100" onclick="registerEvent('${event._id}')">Register</button>`
                 }
+                 <a href="event.html?id=${event._id}" class="btn btn-info w-100 mt-2">View Details</a>
               </div>
             </div>
           `;
@@ -73,26 +93,28 @@
           }
         });
       } catch (error) {
+        console.error("Error loading events:", error);
         alert("⚠️ Failed to load events. Please try again.");
       }
     }
 
     async function registerEvent(eventId) {
       try {
-        const res = await fetch("http://localhost:3000/api/events/register", {
+        const res = await fetch(`http://localhost:3000/api/events/${eventId}/register`, { // Correct URL
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, eventId })
+          headers: getAuthHeaders(), // Include auth headers
+          body: JSON.stringify({}) // userId is taken from token on backend, so empty body is fine
         });
 
         const data = await res.json();
         if (res.ok) {
           alert("✅ Registered successfully!");
-          loadEvents();
+          loadEvents(); // Reload events to update status
         } else {
-          alert("❌ " + data.message);
+          alert("❌ " + (data.error || data.message || "Registration failed."));
         }
       } catch (err) {
+        console.error("Server error during registration:", err);
         alert("⚠️ Server error. Try again.");
       }
     }
