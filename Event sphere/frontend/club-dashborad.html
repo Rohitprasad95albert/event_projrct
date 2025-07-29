@@ -4,10 +4,12 @@
   <meta charset="UTF-8">
   <title>Club Dashboard - EventSphere</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS for styling -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Navbar -->
   <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">EventSphere - Club Dashboard</a>
@@ -17,10 +19,11 @@
   </nav>
 
   <div class="container mt-4">
-
+    <!-- Event Submission Form -->
     <h3>Create New Event</h3>
     <form id="event-form" class="mb-5">
       <div class="row">
+        <!-- Input Fields -->
         <div class="col-md-6 mb-3">
           <label for="title" class="form-label">Event Title</label>
           <input type="text" class="form-control" id="title" required>
@@ -38,19 +41,21 @@
           <input type="date" class="form-control" id="date" required>
         </div>
         <div class="col-md-6 mb-3">
-            <label for="time" class="form-label">Time</label>
-            <input type="time" class="form-control" id="time" required>
+          <label for="time" class="form-label">Time</label>
+          <input type="time" class="form-control" id="time" required>
         </div>
         <div class="col-12 mb-3">
           <label for="description" class="form-label">Event Description</label>
           <textarea class="form-control" id="description" rows="4" required></textarea>
         </div>
-         </div>
+      </div>
+      <!-- Submit Button and Feedback -->
       <button type="submit" class="btn btn-success">Submit Proposal</button>
       <div class="text-success mt-2" id="proposal-msg" style="display: none;"></div>
       <div class="text-danger mt-2" id="proposal-error" style="display: none;"></div>
     </form>
 
+    <!-- Table for Submitted Events -->
     <h3>Your Submitted Events</h3>
     <table class="table table-striped table-bordered mt-3">
       <thead class="table-dark">
@@ -68,17 +73,21 @@
   </div>
 
   <script>
-    const userId = localStorage.getItem("userId"); // User ID from login
-    const clubName = localStorage.getItem("name"); // Club name from login
-    const userRole = localStorage.getItem("role"); // Role from login
+    // Load user info from local storage
+    const userId = localStorage.getItem("userId");
+    const clubName = localStorage.getItem("name");
+    const userRole = localStorage.getItem("role");
 
+    // Only allow access to club members
     if (!userId || userRole !== 'club') {
       alert("⚠️ Please login as a club member to access this page.");
       window.location.href = "login.html";
     }
+
+    // Show the club name on the navbar
     document.getElementById("club-name").innerText = clubName;
 
-    // Helper to get auth headers
+    // Return headers including authorization token
     function getAuthHeaders() {
       const token = localStorage.getItem('token');
       return {
@@ -87,58 +96,46 @@
       };
     }
 
+    // Logout function
     function logout() {
-        localStorage.clear();
-        window.location.href = "login.html";
+      localStorage.clear();
+      window.location.href = "login.html";
     }
 
-    // ✅ Submit Event Proposal
+    // Event listener to handle form submission
     document.getElementById("event-form").addEventListener("submit", async function (e) {
-      e.preventDefault();
+      e.preventDefault(); // Prevent default form submission
 
+      // Get form field values
       const title = document.getElementById("title").value;
       const description = document.getElementById("description").value;
       const date = document.getElementById("date").value;
       const time = document.getElementById("time").value;
       const type = document.getElementById("type").value;
       const venue = document.getElementById("venue").value;
-      // const posterFile = document.getElementById("poster").files[0]; // If using poster upload
 
+      // Feedback messages
       const proposalMsg = document.getElementById("proposal-msg");
       const proposalError = document.getElementById("proposal-error");
       proposalMsg.style.display = 'none';
       proposalError.style.display = 'none';
 
       try {
-        // If you want to use poster upload, change to this:
-        // const formData = new FormData();
-        // formData.append('title', title);
-        // formData.append('description', description);
-        // formData.append('date', date);
-        // formData.append('time', time);
-        // formData.append('type', type);
-        // formData.append('venue', venue);
-        // if (posterFile) formData.append('poster', posterFile);
-
-        // const res = await fetch("http://localhost:3000/api/events/create-with-poster", {
-        //   method: "POST",
-        //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }, // No Content-Type for FormData
-        //   body: formData
-        // });
-
+        // Send POST request to create new event
         const res = await fetch("http://localhost:3000/api/events/create", {
           method: "POST",
-          headers: getAuthHeaders(), // Include auth headers. Content-Type is already set by helper.
+          headers: getAuthHeaders(),
           body: JSON.stringify({ title, description, date, time, type, venue })
         });
 
         const result = await res.json();
 
         if (res.ok) {
+          // Success message and form reset
           proposalMsg.innerText = `✅ "${title}" submitted for approval.`;
           proposalMsg.style.display = "block";
           document.getElementById("event-form").reset();
-          loadClubEvents(); // refresh table
+          loadClubEvents(); // Reload submitted events
         } else {
           proposalError.innerText = "❌ " + (result.error || result.message || "Failed to submit event.");
           proposalError.style.display = "block";
@@ -150,7 +147,7 @@
       }
     });
 
-    // ✅ Load Events Created by This Club
+    // Function to load events submitted by the current club
     async function loadClubEvents() {
       try {
         const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
@@ -158,16 +155,17 @@
         const events = await res.json();
 
         const table = document.getElementById("event-table");
-        table.innerHTML = ""; // Clear old rows
+        table.innerHTML = ""; // Clear previous rows
 
-        // Filter events by the logged-in club's user ID (createdBy)
+        // Filter events created by the logged-in club
         const clubEvents = events.filter(e => e.createdBy && e.createdBy._id === userId);
 
         if (clubEvents.length === 0) {
-            table.innerHTML = '<tr><td colspan="4" class="text-center">No events submitted yet.</td></tr>';
-            return;
+          table.innerHTML = '<tr><td colspan="4" class="text-center">No events submitted yet.</td></tr>';
+          return;
         }
 
+        // Add rows for each event
         clubEvents.forEach(event => {
           const row = document.createElement("tr");
           row.innerHTML = `
@@ -181,13 +179,13 @@
       } catch (err) {
         console.error("Failed to load club events:", err);
         alert("❌ Failed to load club events. Please ensure you are logged in and authorized.");
-        // Optionally redirect to login if token is invalid
         if (err.message.includes('401') || err.message.includes('403')) {
             logout();
         }
       }
     }
 
+    // Returns styled badge based on status
     function getStatusBadge(status) {
       if (status === "approved") return `<span class="badge bg-success">Approved</span>`;
       if (status === "pending") return `<span class="badge bg-warning text-dark">Pending</span>`;
@@ -195,7 +193,7 @@
       return status;
     }
 
-    // ✅ On Load
+    // Load events once the DOM is ready
     document.addEventListener("DOMContentLoaded", loadClubEvents);
   </script>
 </body>
