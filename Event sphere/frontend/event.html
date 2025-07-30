@@ -93,7 +93,7 @@
 
     try {
       // Fetch all events and find the specific one
-      const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+      const res = await fetch("https://event-projrct-1.onrender.com/api/events", { headers: getAuthHeaders() });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const events = await res.json();
       const event = events.find(e => e._id === eventId);
@@ -166,7 +166,7 @@
     }
 
     try {
-      const res = await fetch(`http://localhost:3000/api/events/${eventId}/register`, {
+      const res = await fetch(`https://event-projrct-1.onrender.com/api/events/${eventId}/register`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({ collegeName }) // Send collegeName

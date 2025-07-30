@@ -65,7 +65,7 @@
 
     async function loadEvents() {
       try {
-        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+        const res = await fetch("https://event-projrct-1.onrender.com/api/events", { headers: getAuthHeaders() });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
 
@@ -137,7 +137,7 @@
         recommendedContainer.innerHTML = '';
 
         try {
-            const res = await fetch("http://localhost:3000/api/events/recommended", {
+            const res = await fetch("https://event-projrct-1.onrender.com/api/events/recommended", {
                 headers: getAuthHeaders()
             });
             if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);

@@ -202,7 +202,7 @@
       attendeesListBody.innerHTML = '<tr><td colspan="5" class="text-center">Loading attendees...</td></tr>';
 
       try {
-        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+        const res = await fetch("https://event-projrct-1.onrender.com/api/events", { headers: getAuthHeaders() });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
         const event = events.find(e => e._id === eventId);
@@ -252,7 +252,7 @@
       attendanceError.style.display = 'none';
 
       try {
-        const res = await fetch(`http://localhost:3000/api/events/${eventId}/attendance`, {
+        const res = await fetch(`https://event-projrct-1.onrender.com/api/events/${eventId}/attendance`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ studentId: studentId })
@@ -274,38 +274,36 @@
         errorStatus.style.display = 'block'; // This variable 'errorStatus' is not defined here, should be attendanceError
       }
     }
+// In frontend/club-dashborad.html
+function generateAndDisplayQrCode(qrCodeId) {
+    // This assumes Render will serve your 'frontend' folder as the root of your static site.
+    // So /qr-attendance.html will correctly point to your qr-attendance.html file.
+    const attendancePageUrl = `/qr-attendance.html?qrId=${qrCodeId}`; // MODIFIED LINE
 
-    function generateAndDisplayQrCode(qrCodeId) {
-        // FIX: Path adjusted based on confirmed Live Server URL for Club Dashboard
-        // It uses the known prefix from the current page's URL to form a reliable absolute path
-        const currentPathname = window.location.pathname; // e.g., /Event sphere/frontend/club-dashborad.html
-        const basePath = currentPathname.substring(0, currentPathname.lastIndexOf('/')) + '/'; // e.g., /Event sphere/frontend/
-        const attendancePageUrl = `${window.location.origin}${basePath}qr-attendance.html?qrId=${qrCodeId}`; // MODIFIED LINE
+    const qrcodeDiv = document.getElementById("qrcode");
+    qrcodeDiv.innerHTML = '';
 
-        const qrcodeDiv = document.getElementById("qrcode");
-        qrcodeDiv.innerHTML = '';
+    new QRCode(qrcodeDiv, {
+        text: attendancePageUrl,
+        width: 180,
+        height: 180,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
 
-        new QRCode(qrcodeDiv, {
-            text: attendancePageUrl,
-            width: 180,
-            height: 180,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
+    document.getElementById("qr-link-text").href = attendancePageUrl;
+    document.getElementById("qr-link-text").innerText = attendancePageUrl;
 
-        document.getElementById("qr-link-text").href = attendancePageUrl;
-        document.getElementById("qr-link-text").innerText = attendancePageUrl;
-
-        const qrModal = new bootstrap.Modal(document.getElementById('qrCodeDisplayModal'));
-        qrModal.show();
-    }
+    const qrModal = new bootstrap.Modal(document.getElementById('qrCodeDisplayModal'));
+    qrModal.show();
+}
 
 
     // loadClubEvents FUNCTION DEFINITION - MOVED TO GLOBAL SCOPE
     async function loadClubEvents() {
       try {
-        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+        const res = await fetch("https://event-projrct-1.onrender.com/api/events", { headers: getAuthHeaders() });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
 
@@ -414,7 +412,7 @@
           proposalError.style.display = 'none';
 
           try {
-            const res = await fetch("http://localhost:3000/api/events/create", {
+            const res = await fetch("https://event-projrct-1.onrender.com/api/events/create", {
               method: "POST",
               headers: getAuthHeaders(),
               body: JSON.stringify({

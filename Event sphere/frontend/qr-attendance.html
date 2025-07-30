@@ -75,7 +75,7 @@
 
       // Fetch all events to find the one matching the qrId
       try {
-        const res = await fetch("http://localhost:3000/api/events"); // Note: No auth for this public endpoint
+        const res = await fetch("https://event-projrct-1.onrender.com/api/events"); // Note: No auth for this public endpoint
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
         const event = events.find(e => e.qrCodeId === qrId && e.status === 'approved'); // Find by qrCodeId
@@ -150,7 +150,7 @@
 
       try {
         const qrId = new URLSearchParams(window.location.search).get('qrId');
-        const res = await fetch(`http://localhost:3000/api/events/${qrId}/qr-attendance`, {
+        const res = await fetch(`https://event-projrct-1.onrender.com/api/events/${qrId}/qr-attendance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

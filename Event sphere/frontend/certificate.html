@@ -75,7 +75,7 @@
 
       try {
         // Fetch all events and find the specific one by ID
-        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() }); // Include auth
+        const res = await fetch("https://event-projrct-1.onrender.com/api/events", { headers: getAuthHeaders() }); // Include auth
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
         const event = events.find(e => e._id === eventId);

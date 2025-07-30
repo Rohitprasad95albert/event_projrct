@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log({ email, password });
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
+      const res = await fetch("https://event-projrct-1.onrender.com/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",   // if you need cookies

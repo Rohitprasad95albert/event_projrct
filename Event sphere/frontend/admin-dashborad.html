@@ -103,7 +103,7 @@
     // --- Event Management Functions (Existing) ---
     async function loadEvents() {
       try {
-        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+        const res = await fetch("https://event-projrct-1.onrender.com/api/events", { headers: getAuthHeaders() });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
 
@@ -165,7 +165,7 @@
 
     async function updateEventStatus(eventId, status) {
       try {
-        const res = await fetch(`http://localhost:3000/api/events/${eventId}/status`, {
+        const res = await fetch(`https://event-projrct-1.onrender.com/api/events/${eventId}/status`, {
           method: "PATCH",
           headers: getAuthHeaders(),
           body: JSON.stringify({ status: status })
@@ -192,7 +192,7 @@
       userTable.innerHTML = '<tr><td colspan="4" class="text-center">Loading users...</td></tr>'; // Loading message
 
       try {
-        const res = await fetch("http://localhost:3000/api/auth/users", { headers: getAuthHeaders() }); // Fetch all users
+        const res = await fetch("https://event-projrct-1.onrender.com/api/auth/users", { headers: getAuthHeaders() }); // Fetch all users
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const users = await res.json();
 
@@ -243,7 +243,7 @@
       }
 
       try {
-        const res = await fetch(`http://localhost:3000/api/auth/users/${userId}/role`, {
+        const res = await fetch(`https://event-projrct-1.onrender.com/api/auth/users/${userId}/role`, {
           method: "PATCH",
           headers: getAuthHeaders(),
           body: JSON.stringify({ role: newRole })
