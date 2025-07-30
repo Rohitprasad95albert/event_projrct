@@ -169,7 +169,7 @@
     const userRole = localStorage.getItem("role");
     let currentOpenEventId = null;
 
-    // FUNCTIONS CALLED DIRECTLY FROM INLINE HTML ONCLICK ATTRIBUTES (GLOBAL SCOPE)
+    // FUNCTIONS THAT ARE CALLED DIRECTLY FROM INLINE HTML ONCLICK ATTRIBUTES (GLOBAL SCOPE)
     // These must be defined before DOMContentLoaded, as they are called by HTML directly.
 
     function logout() {
@@ -271,13 +271,16 @@
       } catch (error) {
         console.error("Error marking attendance:", error);
         attendanceError.innerText = `⚠️ Server error marking attendance: ${error.message}`;
-        attendanceError.style.display = 'block';
+        errorStatus.style.display = 'block'; // This variable 'errorStatus' is not defined here, should be attendanceError
       }
     }
 
     function generateAndDisplayQrCode(qrCodeId) {
         // FIX: Path adjusted based on confirmed Live Server URL for Club Dashboard
-        const attendancePageUrl = `http://127.0.0.1:5500/frontend/qr-attendance.html?qrId=${qrCodeId}`; // MODIFIED LINE
+        // It uses the known prefix from the current page's URL to form a reliable absolute path
+        const currentPathname = window.location.pathname; // e.g., /Event sphere/frontend/club-dashborad.html
+        const basePath = currentPathname.substring(0, currentPathname.lastIndexOf('/')) + '/'; // e.g., /Event sphere/frontend/
+        const attendancePageUrl = `${window.location.origin}${basePath}qr-attendance.html?qrId=${qrCodeId}`; // MODIFIED LINE
 
         const qrcodeDiv = document.getElementById("qrcode");
         qrcodeDiv.innerHTML = '';
