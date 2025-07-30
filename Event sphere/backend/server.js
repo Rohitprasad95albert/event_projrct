@@ -8,7 +8,7 @@ const path = require('path'); // For serving static files
 
 // CORS configuration - ENSURE THIS MATCHES YOUR FRONTEND'S PORT
 app.use(cors({
-    origin: 'http://127.0.0.1:5500', // Assuming your frontend is truly on port 5500
+    origin: 'https://event-projrct-frontend.onrender.com',// Assuming your frontend is truly on port 5500
     credentials: true
 }));
 
