@@ -22,6 +22,11 @@
 
     <h3 class="mt-5">Your Registered Events</h3>
     <div class="row" id="registered-events"></div>
+
+    <h3 class="mt-5">Recommended Events for You</h3>
+    <div class="row" id="recommended-events">
+        <div class="col-12 text-center text-muted" id="no-recommendations-msg">Loading recommendations...</div>
+    </div>
   </div>
 
   <script>
@@ -34,7 +39,6 @@
       window.location.href = "login.html";
     }
 
-    // Helper to get auth headers
     function getAuthHeaders() {
       const token = localStorage.getItem('token');
       return {
@@ -48,9 +52,19 @@
         window.location.href = "login.html";
     }
 
+    // Helper to check if an event date is in the past (strictly after the event day)
+    function isEventPast(eventDateString) {
+        const eventDate = new Date(eventDateString);
+        const currentDate = new Date();
+        // Set both to start of the day to compare dates only.
+        // The event is considered "past" if its date is *before* today's date.
+        eventDate.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        return eventDate < currentDate;
+    }
+
     async function loadEvents() {
       try {
-        // Fetch all events
         const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const events = await res.json();
@@ -62,11 +76,13 @@
         registeredContainer.innerHTML = "";
 
         events.forEach(event => {
-          // Only display approved events
           if (event.status !== "approved") return;
 
-          // Check if the current user is in the attendees list
-          const isRegistered = event.attendees.includes(userId); // Corrected from 'participants'
+          const currentStudentAttendee = event.attendees.find(a => a.userId && a.userId._id.toString() === userId);
+          const isRegistered = !!currentStudentAttendee;
+          // FIX: Explicitly check if isAttended is true
+          const hasAttended = isRegistered && currentStudentAttendee.isAttended === true; // MODIFIED LINE
+          const eventHasPassed = isEventPast(event.date);
 
           const card = document.createElement("div");
           card.className = "col-md-4";
@@ -76,9 +92,12 @@
                 <h5 class="card-title">${event.title}</h5>
                 <p class="card-text">Date: ${event.date} | Venue: ${event.venue}</p>
                 <p class="card-text">Organizer: ${event.createdBy ? event.createdBy.name : 'N/A'}</p>
+                <p class="card-text small text-muted">Type: ${event.type || 'N/A'}</p>
                 ${
                   isRegistered
-                    ? `<a href="certificate.html?id=${event._id}" class="btn btn-success w-100">Download Certificate</a>` // Pass event._id
+                    ? (hasAttended && eventHasPassed // Only show download if registered AND attended AND event is past
+                        ? `<a href="certificate.html?id=${event._id}" class="btn btn-success w-100">Download Certificate</a>`
+                        : `<button class="btn btn-secondary w-100" disabled>Certificate Not Ready</button>`)
                     : `<button class="btn btn-primary w-100" onclick="registerEvent('${event._id}')">Register</button>`
                 }
                  <a href="event.html?id=${event._id}" class="btn btn-info w-100 mt-2">View Details</a>
@@ -92,35 +111,73 @@
             upcomingContainer.appendChild(card);
           }
         });
+
+        if (upcomingContainer.childElementCount === 0) {
+            upcomingContainer.innerHTML = '<div class="col-12 text-center text-muted">No upcoming events available.</div>';
+        }
+        if (registeredContainer.childElementCount === 0) {
+            registeredContainer.innerHTML = '<div class="col-12 text-center text-muted">You have not registered for any events yet.</div>';
+        }
+
       } catch (error) {
         console.error("Error loading events:", error);
         alert("⚠️ Failed to load events. Please try again.");
+         if (error.message.includes('401') || error.message.includes('403')) {
+            logout();
+        }
       }
     }
 
     async function registerEvent(eventId) {
-      try {
-        const res = await fetch(`http://localhost:3000/api/events/${eventId}/register`, { // Correct URL
-          method: "POST",
-          headers: getAuthHeaders(), // Include auth headers
-          body: JSON.stringify({}) // userId is taken from token on backend, so empty body is fine
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          alert("✅ Registered successfully!");
-          loadEvents(); // Reload events to update status
-        } else {
-          alert("❌ " + (data.error || data.message || "Registration failed."));
-        }
-      } catch (err) {
-        console.error("Server error during registration:", err);
-        alert("⚠️ Server error. Try again.");
-      }
+      window.location.href = `event.html?id=${eventId}`;
     }
 
-    // Load events on page load
-    document.addEventListener("DOMContentLoaded", loadEvents);
+    async function loadRecommendedEvents() {
+        const recommendedContainer = document.getElementById("recommended-events");
+        recommendedContainer.innerHTML = '';
+
+        try {
+            const res = await fetch("http://localhost:3000/api/events/recommended", {
+                headers: getAuthHeaders()
+            });
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const recommendedEvents = await res.json();
+
+            if (recommendedEvents.length === 0) {
+                recommendedContainer.innerHTML = '<div class="col-12 text-center text-muted">No new recommendations at this time. Join some events to help us suggest more!</div>';
+                return;
+            }
+
+            recommendedEvents.forEach(event => {
+              const isRegistered = event.attendees.some(a => a.userId && a.userId._id.toString() === userId);
+              if (isRegistered) return;
+
+              const card = document.createElement("div");
+              card.className = "col-md-4";
+              card.innerHTML = `
+                <div class="card mb-3 shadow-sm">
+                  <div class="card-body">
+                    <h5 class="card-title">${event.title}</h5>
+                    <p class="card-text">Date: ${event.date} | Venue: ${event.venue}</p>
+                    <p class="card-text">Type: ${event.type}</p>
+                    <p class="card-text">Organizer: ${event.createdBy ? event.createdBy.name : 'N/A'}</p>
+                    <button class="btn btn-primary w-100" onclick="registerEvent('${event._id}')">Register</button>
+                    <a href="event.html?id=${event._id}" class="btn btn-info w-100 mt-2">View Details</a>
+                  </div>
+                </div>
+              `;
+              recommendedContainer.appendChild(card);
+            });
+        } catch (error) {
+            console.error("Error loading recommended events:", error);
+            recommendedContainer.innerHTML = '<div class="col-12 text-center text-danger">Failed to load recommendations. Please try again later.</div>';
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadEvents();
+        loadRecommendedEvents();
+    });
   </script>
 </body>
 </html>

@@ -61,9 +61,25 @@
       </thead>
       <tbody id="rejected-events"></tbody>
     </table>
+
+    <h3 class="mt-5">User Management</h3>
+    <table class="table table-bordered mt-3">
+      <thead class="table-info">
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Current Role</th>
+          <th>Change Role To</th>
+        </tr>
+      </thead>
+      <tbody id="user-table">
+        <tr><td colspan="4" class="text-center">Loading users...</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <script>
+    const currentAdminId = localStorage.getItem("userId"); // Get current admin's ID
     const userRole = localStorage.getItem("role");
     if (userRole !== 'admin') {
         alert("⚠️ Access Denied: Only admins can view this page.");
@@ -84,6 +100,7 @@
         window.location.href = "login.html";
     }
 
+    // --- Event Management Functions (Existing) ---
     async function loadEvents() {
       try {
         const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
@@ -109,7 +126,8 @@
           const row = document.createElement("tr");
           row.innerHTML = `
             <td>${event.title}</td>
-            <td>${event.createdBy ? event.createdBy.name : 'N/A'}</td> <td>${event.date}</td>
+            <td>${event.createdBy ? event.createdBy.name : 'N/A'}</td>
+            <td>${event.date}</td>
             <td>${event.venue}</td>
             ${
               event.status === "pending"
@@ -119,7 +137,7 @@
                      <button class="btn btn-danger btn-sm" onclick="updateEventStatus('${event._id}', 'rejected')">Reject</button>
                    </td>`
                 : `<td><span class="badge bg-${event.status === "approved" ? "success" : "danger"}">${event.status.charAt(0).toUpperCase() + event.status.slice(1)}</span></td>
-                   <td></td> `
+                   <td></td>`
             }
           `;
 
@@ -132,7 +150,6 @@
           }
         });
 
-        // If a table is empty, show a message
         if (pendingTable.childElementCount === 0) pendingTable.innerHTML = '<tr><td colspan="6" class="text-center">No pending events.</td></tr>';
         if (approvedTable.childElementCount === 0) approvedTable.innerHTML = '<tr><td colspan="5" class="text-center">No approved events.</td></tr>';
         if (rejectedTable.childElementCount === 0) rejectedTable.innerHTML = '<tr><td colspan="5" class="text-center">No rejected events.</td></tr>';
@@ -140,7 +157,6 @@
       } catch (err) {
         console.error("Error loading events:", err);
         alert("❌ Failed to load events: " + err.message);
-         // Optionally redirect to login if token is invalid
         if (err.message.includes('401') || err.message.includes('403')) {
             logout();
         }
@@ -149,17 +165,16 @@
 
     async function updateEventStatus(eventId, status) {
       try {
-        // Send PATCH request to the new /:id/status endpoint
         const res = await fetch(`http://localhost:3000/api/events/${eventId}/status`, {
-          method: "PATCH", // Changed to PATCH
-          headers: getAuthHeaders(), // Include auth headers
-          body: JSON.stringify({ status: status }) // Send the desired status
+          method: "PATCH",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ status: status })
         });
 
         const result = await res.json();
         if (res.ok) {
           alert(`✅ Event ${status} successfully!`);
-          loadEvents(); // Reload events to update status
+          loadEvents();
         } else {
           alert("❌ " + (result.error || result.message || "Failed to update event status."));
         }
@@ -169,7 +184,100 @@
       }
     }
 
-    document.addEventListener("DOMContentLoaded", loadEvents);
+
+    // --- NEW User Management Functions ---
+
+    async function loadUsers() {
+      const userTable = document.getElementById("user-table");
+      userTable.innerHTML = '<tr><td colspan="4" class="text-center">Loading users...</td></tr>'; // Loading message
+
+      try {
+        const res = await fetch("http://localhost:3000/api/auth/users", { headers: getAuthHeaders() }); // Fetch all users
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const users = await res.json();
+
+        userTable.innerHTML = ''; // Clear loading message
+
+        if (users.length === 0) {
+          userTable.innerHTML = '<tr><td colspan="4" class="text-center">No users found.</td></tr>';
+          return;
+        }
+
+        users.forEach(user => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${user.name}</td>
+            <td>${user.email}</td>
+            <td><span class="badge bg-${getRoleBadgeColor(user.role)}">${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span></td>
+            <td>
+              ${user._id === currentAdminId ? '<span class="text-muted">Cannot change own role</span>' : `
+              <select class="form-select form-select-sm" onchange="changeUserRole('${user._id}', this.value)">
+                <option value="student" ${user.role === 'student' ? 'selected' : ''}>Student</option>
+                <option value="club" ${user.role === 'club' ? 'selected' : ''}>Club</option>
+                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+              </select>
+              `}
+            </td>
+          `;
+          userTable.appendChild(row);
+        });
+
+      } catch (err) {
+        console.error("Error loading users:", err);
+        userTable.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load users.</td></tr>';
+        if (err.message.includes('401') || err.message.includes('403')) {
+            logout();
+        }
+      }
+    }
+
+    async function changeUserRole(userId, newRole) {
+      if (userId === currentAdminId) {
+          alert("❌ Error: You cannot change your own role through this interface.");
+          loadUsers(); // Reload to revert dropdown
+          return;
+      }
+      if (!confirm(`Are you sure you want to change this user's role to "${newRole}"?`)) {
+          loadUsers(); // Reload to revert dropdown if cancelled
+          return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/auth/users/${userId}/role`, {
+          method: "PATCH",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ role: newRole })
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          alert(`✅ User role updated to "${newRole}" successfully!`);
+          loadUsers(); // Reload users table to show updated roles
+        } else {
+          alert("❌ " + (result.error || result.message || "Failed to update user role."));
+          loadUsers(); // Reload to show original role on error
+        }
+      } catch (err) {
+        console.error("Error updating user role:", err);
+        alert("⚠️ Server error updating user role: " + err.message);
+        loadUsers(); // Reload on server error
+      }
+    }
+
+    function getRoleBadgeColor(role) {
+      switch (role) {
+        case 'student': return 'primary';
+        case 'club': return 'info';
+        case 'admin': return 'danger';
+        default: return 'secondary';
+      }
+    }
+
+    // --- On Load: Call all necessary functions ---
+    document.addEventListener("DOMContentLoaded", () => {
+        loadEvents(); // Load event data
+        loadUsers();  // Load user data for management
+    });
   </script>
 </body>
 </html>

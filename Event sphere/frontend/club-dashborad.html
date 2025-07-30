@@ -27,7 +27,17 @@
         </div>
         <div class="col-md-6 mb-3">
           <label for="type" class="form-label">Event Type</label>
-          <input type="text" class="form-control" id="type" placeholder="e.g., Tech, Cultural" required>
+          <select class="form-select" id="type" required>
+            <option value="">Select Event Type</option>
+            <option value="Intra College">Intra College</option>
+            <option value="Inter College">Inter College</option>
+            <option value="Tech">Tech</option>
+            <option value="Cultural">Cultural</option>
+            <option value="Sports">Sports</option>
+            <option value="Workshop">Workshop</option>
+            <option value="Seminar">Seminar</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
         <div class="col-md-6 mb-3">
           <label for="venue" class="form-label">Venue</label>
@@ -45,7 +55,34 @@
           <label for="description" class="form-label">Event Description</label>
           <textarea class="form-control" id="description" rows="4" required></textarea>
         </div>
-         </div>
+
+        <h5 class="mt-4">Attendance Verification Question (Optional but Recommended)</h5>
+        <div class="col-12 mb-3">
+          <label for="question" class="form-label">Question</label>
+          <input type="text" class="form-control" id="question" placeholder="e.g., What was the color of the main stage backdrop?">
+          <small class="form-text text-muted">A simple question to verify attendance.</small>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="option1" class="form-label">Option 1</label>
+          <input type="text" class="form-control" id="option1" placeholder="Option A">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="option2" class="form-label">Option 2</label>
+          <input type="text" class="form-control" id="option2" placeholder="Option B">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="option3" class="form-label">Option 3</label>
+          <input type="text" class="form-control" id="option3" placeholder="Option C">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label for="option4" class="form-label">Option 4</label>
+          <input type="text" class="form-control" id="option4" placeholder="Option D">
+        </div>
+        <div class="col-12 mb-3">
+          <label for="correctAnswer" class="form-label">Correct Answer (must match one of the options above)</label>
+          <input type="text" class="form-control" id="correctAnswer" placeholder="Enter the exact correct option text">
+        </div>
+        </div>
       <button type="submit" class="btn btn-success">Submit Proposal</button>
       <div class="text-success mt-2" id="proposal-msg" style="display: none;"></div>
       <div class="text-danger mt-2" id="proposal-error" style="display: none;"></div>
@@ -59,133 +96,93 @@
           <th>Date</th>
           <th>Venue</th>
           <th>Status</th>
+          <th>Registered Students</th>
+          <th>QR Code ID</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="event-table">
-        <tr><td colspan="4" class="text-center">Loading your events...</td></tr>
+        <tr><td colspan="7" class="text-center">Loading your events...</td></tr>
       </tbody>
     </table>
   </div>
 
+  <div class="modal fade" id="attendanceModal" tabindex="-1" aria-labelledby="attendanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="attendanceModalLabel">Manage Attendance for "<span id="modal-event-title"></span>"</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>College</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="attendees-list">
+              <tr><td colspan="5" class="text-center">No attendees registered yet.</td></tr>
+            </tbody>
+          </table>
+          <p id="attendance-message" class="mt-3 text-success" style="display: none;"></p>
+          <p id="attendance-error" class="mt-3 text-danger" style="display: none;"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="qrCodeDisplayModal" tabindex="-1" aria-labelledby="qrCodeDisplayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="qrCodeDisplayModalLabel">Scan for Attendance</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center">
+          <p class="text-muted">Students can scan this QR code to submit attendance.</p>
+          <div id="qrcode" style="width:180px; height:180px; margin:10px auto;"></div>
+          <p class="mt-2 small text-break">Link: <a id="qr-link-text" href="#" target="_blank"></a></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="qrcode.min.js"></script>
+
   <script>
-    const userId = localStorage.getItem("userId"); // User ID from login
-    const clubName = localStorage.getItem("name"); // Club name from login
-    const userRole = localStorage.getItem("role"); // Role from login
+    // Constants and variables that need to be globally accessible or scoped
+    const userId = localStorage.getItem("userId");
+    const clubName = localStorage.getItem("name");
+    const userRole = localStorage.getItem("role");
+    let currentOpenEventId = null;
 
-    if (!userId || userRole !== 'club') {
-      alert("⚠️ Please login as a club member to access this page.");
-      window.location.href = "login.html";
-    }
-    document.getElementById("club-name").innerText = clubName;
-
-    // Helper to get auth headers
-    function getAuthHeaders() {
-      const token = localStorage.getItem('token');
-      return {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-    }
+    // FUNCTIONS CALLED DIRECTLY FROM INLINE HTML ONCLICK ATTRIBUTES (GLOBAL SCOPE)
+    // These must be defined before DOMContentLoaded, as they are called by HTML directly.
 
     function logout() {
         localStorage.clear();
         window.location.href = "login.html";
     }
 
-    // ✅ Submit Event Proposal
-    document.getElementById("event-form").addEventListener("submit", async function (e) {
-      e.preventDefault();
-
-      const title = document.getElementById("title").value;
-      const description = document.getElementById("description").value;
-      const date = document.getElementById("date").value;
-      const time = document.getElementById("time").value;
-      const type = document.getElementById("type").value;
-      const venue = document.getElementById("venue").value;
-      // const posterFile = document.getElementById("poster").files[0]; // If using poster upload
-
-      const proposalMsg = document.getElementById("proposal-msg");
-      const proposalError = document.getElementById("proposal-error");
-      proposalMsg.style.display = 'none';
-      proposalError.style.display = 'none';
-
-      try {
-        // If you want to use poster upload, change to this:
-        // const formData = new FormData();
-        // formData.append('title', title);
-        // formData.append('description', description);
-        // formData.append('date', date);
-        // formData.append('time', time);
-        // formData.append('type', type);
-        // formData.append('venue', venue);
-        // if (posterFile) formData.append('poster', posterFile);
-
-        // const res = await fetch("http://localhost:3000/api/events/create-with-poster", {
-        //   method: "POST",
-        //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }, // No Content-Type for FormData
-        //   body: formData
-        // });
-
-        const res = await fetch("http://localhost:3000/api/events/create", {
-          method: "POST",
-          headers: getAuthHeaders(), // Include auth headers. Content-Type is already set by helper.
-          body: JSON.stringify({ title, description, date, time, type, venue })
-        });
-
-        const result = await res.json();
-
-        if (res.ok) {
-          proposalMsg.innerText = `✅ "${title}" submitted for approval.`;
-          proposalMsg.style.display = "block";
-          document.getElementById("event-form").reset();
-          loadClubEvents(); // refresh table
-        } else {
-          proposalError.innerText = "❌ " + (result.error || result.message || "Failed to submit event.");
-          proposalError.style.display = "block";
-        }
-      } catch (err) {
-        console.error("Error submitting event:", err);
-        proposalError.innerText = "⚠️ Server error submitting event: " + err.message;
-        proposalError.style.display = "block";
-      }
-    });
-
-    // ✅ Load Events Created by This Club
-    async function loadClubEvents() {
-      try {
-        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const events = await res.json();
-
-        const table = document.getElementById("event-table");
-        table.innerHTML = ""; // Clear old rows
-
-        // Filter events by the logged-in club's user ID (createdBy)
-        const clubEvents = events.filter(e => e.createdBy && e.createdBy._id === userId);
-
-        if (clubEvents.length === 0) {
-            table.innerHTML = '<tr><td colspan="4" class="text-center">No events submitted yet.</td></tr>';
-            return;
-        }
-
-        clubEvents.forEach(event => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${event.title}</td>
-            <td>${event.date}</td>
-            <td>${event.venue}</td>
-            <td>${getStatusBadge(event.status)}</td>
-          `;
-          table.appendChild(row);
-        });
-      } catch (err) {
-        console.error("Failed to load club events:", err);
-        alert("❌ Failed to load club events. Please ensure you are logged in and authorized.");
-        // Optionally redirect to login if token is invalid
-        if (err.message.includes('401') || err.message.includes('403')) {
-            logout();
-        }
-      }
+    function getAuthHeaders() {
+      const token = localStorage.getItem('token');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
     }
 
     function getStatusBadge(status) {
@@ -195,8 +192,255 @@
       return status;
     }
 
-    // ✅ On Load
-    document.addEventListener("DOMContentLoaded", loadClubEvents);
+    async function openAttendanceModal(eventId, eventTitle) {
+      currentOpenEventId = eventId;
+      document.getElementById('modal-event-title').innerText = eventTitle;
+      document.getElementById('attendance-message').style.display = 'none';
+      document.getElementById('attendance-error').style.display = 'none';
+
+      const attendeesListBody = document.getElementById('attendees-list');
+      attendeesListBody.innerHTML = '<tr><td colspan="5" class="text-center">Loading attendees...</td></tr>';
+
+      try {
+        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const events = await res.json();
+        const event = events.find(e => e._id === eventId);
+
+        if (!event || !event.attendees || event.attendees.length === 0) {
+          attendeesListBody.innerHTML = '<tr><td colspan="5" class="text-center">No attendees registered yet.</td></tr>';
+          return;
+        }
+
+        attendeesListBody.innerHTML = '';
+
+        event.attendees.forEach(attendee => {
+          const studentName = attendee.userId ? attendee.userId.name : 'N/A';
+          const studentEmail = attendee.userId ? attendee.userId.email : 'N/A';
+          const studentCollege = attendee.registeredCollege || 'N/A';
+          const isAttended = attendee.isAttended;
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${studentName}</td>
+            <td>${studentEmail}</td>
+            <td>${studentCollege}</td>
+            <td><span class="badge bg-${isAttended ? 'success' : 'secondary'}">${isAttended ? 'Attended' : 'Pending'}</span></td>
+            <td>
+              ${isAttended ?
+                `<button class="btn btn-sm btn-success" disabled>Marked</button>` :
+                `<button class="btn btn-sm btn-primary" onclick="markAttendance('${eventId}', '${attendee.userId._id}')">Mark Attended</button>`
+              }
+            </td>
+          `;
+          attendeesListBody.appendChild(row);
+        });
+
+      } catch (error) {
+        console.error("Error loading attendees:", error);
+        attendeesListBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load attendees.</td></tr>';
+      }
+
+      const attendanceModal = new bootstrap.Modal(document.getElementById('attendanceModal'));
+      attendanceModal.show();
+    }
+
+    async function markAttendance(eventId, studentId) {
+      const attendanceMessage = document.getElementById('attendance-message');
+      const attendanceError = document.getElementById('attendance-error');
+      attendanceMessage.style.display = 'none';
+      attendanceError.style.display = 'none';
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/events/${eventId}/attendance`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ studentId: studentId })
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          attendanceMessage.innerText = `✅ Attendance marked for student.`;
+          attendanceMessage.style.display = 'block';
+          openAttendanceModal(eventId, document.getElementById('modal-event-title').innerText);
+        } else {
+          attendanceError.innerText = `❌ ${result.error || result.message || 'Failed to mark attendance.'}`;
+          attendanceError.style.display = 'block';
+        }
+      } catch (error) {
+        console.error("Error marking attendance:", error);
+        attendanceError.innerText = `⚠️ Server error marking attendance: ${error.message}`;
+        attendanceError.style.display = 'block';
+      }
+    }
+
+    function generateAndDisplayQrCode(qrCodeId) {
+        // FIX: Path adjusted based on confirmed Live Server URL for Club Dashboard
+        const attendancePageUrl = `http://127.0.0.1:5500/frontend/qr-attendance.html?qrId=${qrCodeId}`; // MODIFIED LINE
+
+        const qrcodeDiv = document.getElementById("qrcode");
+        qrcodeDiv.innerHTML = '';
+
+        new QRCode(qrcodeDiv, {
+            text: attendancePageUrl,
+            width: 180,
+            height: 180,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        document.getElementById("qr-link-text").href = attendancePageUrl;
+        document.getElementById("qr-link-text").innerText = attendancePageUrl;
+
+        const qrModal = new bootstrap.Modal(document.getElementById('qrCodeDisplayModal'));
+        qrModal.show();
+    }
+
+
+    // loadClubEvents FUNCTION DEFINITION - MOVED TO GLOBAL SCOPE
+    async function loadClubEvents() {
+      try {
+        const res = await fetch("http://localhost:3000/api/events", { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const events = await res.json();
+
+        const table = document.getElementById("event-table");
+        table.innerHTML = "";
+
+        const clubEvents = events.filter(e => e.createdBy && e.createdBy._id === userId)
+                                 .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+
+        if (clubEvents.length === 0) {
+            table.innerHTML = '<tr><td colspan="7" class="text-center">No events submitted yet.</td></tr>';
+            return;
+        }
+
+        clubEvents.forEach(event => {
+          let actionButtonsHtml = '';
+          if (event.status === 'approved') {
+              actionButtonsHtml = `
+                <button class="btn btn-sm btn-info me-1" onclick="openAttendanceModal('${event._id}', '${event.title}')">View Attendees</button>
+                ${event.qrCodeId ? `<button class="btn btn-sm btn-primary" onclick="generateAndDisplayQrCode('${event.qrCodeId}')">Get QR</button>` : ''}
+              `;
+          } else {
+              actionButtonsHtml = `<span class="text-muted">No actions for ${event.status} events</span>`;
+          }
+
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                <td>${event.title}</td>
+                <td>${event.date}</td>
+                <td>${event.venue}</td>
+                <td>${getStatusBadge(event.status)}</td>
+                <td>${event.attendees ? event.attendees.length : 0}</td>
+                <td>${event.qrCodeId || 'N/A'}</td>
+                <td>
+                  ${actionButtonsHtml}
+                </td>
+              `;
+          table.appendChild(row);
+        });
+      } catch (err) {
+        console.error("Failed to load club events:", err);
+        alert("❌ Failed to load club events. Please ensure you are logged in and authorized.");
+        if (err.message.includes('401') || err.message.includes('403')) {
+            logout();
+        }
+      }
+    }
+
+
+    // All code that interacts with the DOM elements *after* they are loaded
+    // and initial setup logic goes inside this DOMContentLoaded listener.
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initial setup for the dashboard
+        if (!userId || userRole !== 'club') {
+          alert("⚠️ Please login as a club member to access this page.");
+          window.location.href = "login.html";
+        }
+        document.getElementById("club-name").innerText = clubName;
+
+        // Event listener for the form submission
+        document.getElementById("event-form").addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const title = document.getElementById("title").value;
+          const description = document.getElementById("description").value;
+          const date = document.getElementById("date").value;
+          const time = document.getElementById("time").value;
+          const type = document.getElementById("type").value;
+          const venue = document.getElementById("venue").value;
+
+          const question = document.getElementById("question").value.trim();
+          const option1 = document.getElementById("option1").value.trim();
+          const option2 = document.getElementById("option2").value.trim();
+          const option3 = document.getElementById("option3").value.trim();
+          const option4 = document.getElementById("option4").value.trim();
+          const correctAnswer = document.getElementById("correctAnswer").value.trim();
+
+          let attendanceQuestion = null;
+          if (question && correctAnswer) {
+              const options = [option1, option2, option3, option4].filter(opt => opt !== '');
+              if (options.length > 0) {
+                  if (options.includes(correctAnswer)) {
+                      attendanceQuestion = {
+                          question: question,
+                          options: options,
+                          correctAnswer: correctAnswer
+                      };
+                  } else {
+                      alert("Error: Correct Answer must exactly match one of the provided Options.");
+                      return;
+                  }
+              } else {
+                  alert("Error: Please provide at least one option for the attendance question.");
+                  return;
+              }
+          } else if (question || option1 || option2 || option3 || option4 || correctAnswer) {
+              alert("Error: If setting an attendance question, please fill in the Question, Correct Answer, and at least one Option.");
+              return;
+          }
+
+          const proposalMsg = document.getElementById("proposal-msg");
+          const proposalError = document.getElementById("proposal-error");
+          proposalMsg.style.display = 'none';
+          proposalError.style.display = 'none';
+
+          try {
+            const res = await fetch("http://localhost:3000/api/events/create", {
+              method: "POST",
+              headers: getAuthHeaders(),
+              body: JSON.stringify({
+                title, description, date, time, type, venue,
+                attendanceQuestion: attendanceQuestion
+              })
+            });
+
+            const result = await res.json();
+
+            if (res.ok) {
+              proposalMsg.innerText = `✅ "${title}" submitted for approval. QR Code ID: ${result.qrCodeId || 'N/A'}`;
+              proposalMsg.style.display = "block";
+              document.getElementById("event-form").reset();
+              loadClubEvents();
+            } else {
+              proposalError.innerText = "❌ " + (result.error || result.message || "Failed to submit event.");
+              proposalError.style.display = "block";
+            }
+          } catch (err) {
+            console.error("Error submitting event:", err);
+            proposalError.innerText = "⚠️ Server error submitting event: " + err.message;
+            proposalError.style.display = "block";
+          }
+        });
+
+        // Initial loading of club events
+        loadClubEvents();
+    });
   </script>
 </body>
 </html>

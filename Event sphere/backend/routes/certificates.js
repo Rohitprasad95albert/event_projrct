@@ -1,7 +1,8 @@
+// backend/routes/certificates.js
 const express = require('express');
 const verifyToken = require('../middleware/auth');
 const Event = require('../models/Event');
-const User = require('../models/User');
+// const User = require('../models/User'); // Not directly needed here, but User is populated through Event
 const generateCertificate = require('../utils/certificateGenerator');
 const path = require('path');
 const fs = require('fs');
@@ -14,7 +15,8 @@ router.post('/generate/:eventId', verifyToken, async (req, res) => {
     return res.status(403).json({ error: 'Access denied' });
   }
 
-  const event = await Event.findById(req.params.eventId).populate('attendees');
+  // Populate attendees.userId to get the student's name
+  const event = await Event.findById(req.params.eventId).populate('attendees.userId', 'name');
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
   const certDir = path.join(__dirname, '../uploads/certificates');
@@ -23,8 +25,13 @@ router.post('/generate/:eventId', verifyToken, async (req, res) => {
   const files = [];
 
   for (const attendee of event.attendees) {
-    const certPath = await generateCertificate(attendee.name, event.title, certDir);
-    files.push({ student: attendee.name, file: path.basename(certPath) });
+    if (attendee.userId) { // Ensure userId exists
+        // attendee.userId.name is the student's name
+        const studentName = attendee.userId.name;
+        // attendee.registeredCollege (if you want to use it on the cert)
+        const certPath = await generateCertificate(studentName, event.title, certDir);
+        files.push({ student: studentName, file: path.basename(certPath) });
+    }
   }
 
   res.json({ message: 'Certificates generated', files });

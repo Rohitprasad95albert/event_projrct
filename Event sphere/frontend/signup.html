@@ -28,11 +28,7 @@
           <div class="mb-3">
             <label for="signupRole" class="form-label">Register as</label>
             <select class="form-select" id="signupRole" required>
-              <option value="">Select Role</option>
-              <option value="student">Student</option>
-              <option value="club">Club</option>
-              <option value="admin">Admin</option>
-            </select>
+              <option value="student">Student</option> </select>
           </div>
           <button type="submit" class="btn btn-success w-100">Sign Up</button>
           <p class="text-center mt-3">Already have an account? <a href="login.html">Login</a></p>
@@ -50,7 +46,7 @@
       const name = document.getElementById("name").value.trim();
       const email = document.getElementById("signupEmail").value.trim();
       const password = document.getElementById("signupPassword").value.trim();
-      const role = document.getElementById("signupRole").value;
+      const role = document.getElementById("signupRole").value; // This will now always be 'student' from the select
 
       const successMsg = document.getElementById("signup-success");
       const errorMsg = document.getElementById("signup-error");
@@ -59,7 +55,7 @@
         const res = await fetch("http://localhost:3000/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password, role }),
+          body: JSON.stringify({ name, email, password, role }), // 'role' will always be 'student'
         });
 
         const data = await res.json();
@@ -70,7 +66,7 @@
           errorMsg.style.display = "none";
           setTimeout(() => window.location.href = "login.html", 1500);
         } else {
-          errorMsg.textContent = "❌ " + (data.error || "Something went wrong."); // Use data.error from backend
+          errorMsg.textContent = "❌ " + (data.error || "Something went wrong.");
           errorMsg.style.display = "block";
           successMsg.style.display = "none";
         }
